@@ -20,7 +20,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.69)
-AC_INIT([dmbcs-micro-server], [0.2], [http://rdmp.org/dmbcs/contact])
+AC_INIT([dmbcs-micro-server], [0.3], [http://rdmp.org/dmbcs/contact])
 AM_INIT_AUTOMAKE
 AM_SILENT_RULES([yes])
 AC_CONFIG_SRCDIR([DMBCS/micro-server/query-string.cc])
