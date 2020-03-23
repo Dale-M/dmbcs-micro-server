@@ -1,0 +1,11 @@
+prefix=@prefix@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: dmbcs-micro-server
+Description: CGI C++ programming library
+Version: @VERSION@
+Requires: curlpp 
+Libs: -L${libdir} -ldmbcs-micro-server @CURLPP_LIBS@ -lgcrypt
+Cflags: -I${includedir} 
