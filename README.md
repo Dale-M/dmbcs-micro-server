@@ -26,7 +26,7 @@ change in the near future.
 The *dmbcs-micro-server* source code is managed with *GIT* (configured
 with *autotools*, built with *make* and a good C++17 compiler). Type
 
-   git clone http://rdmp.org/dmbcs/micro-server.git dmbcs-micro-server
+>   git clone http://rdmp.org/dmbcs/micro-server.git dmbcs-micro-server
 
 at the command line to obtain a copy.
 
@@ -34,12 +34,12 @@ at the command line to obtain a copy.
 ## Documentation
 
 The documentation, as yet incomplete, comes with the source, and you can
-also read it [https://rdmp.org/dmbcs/micro-server/documentation](here).
+also read it [here](https://rdmp.org/dmbcs/micro-server/documentation).
 
 
 ## Contact
 
-Please click [https://rdmp.org/dmbcs/contact](here) if you wish to send us
+Please click [here](https://rdmp.org/dmbcs/contact) if you wish to send us
 a message.
 
 ### Mailing list
