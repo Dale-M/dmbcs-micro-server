@@ -26,10 +26,11 @@ change in the near future.
 The following is provided as the simplest code to demonstrate use of the
 dmbcs-micro-server library, not to inform of any coding style or quality
 system approach.  We assume a standard GNU system with recent
-<code>make</code>, <code>bash</code>, <code>gcc</code>, etc.
+`make`, `bash`, `gcc`, etc.
 
-Start with the HTML file <code>calc.html</code>
+Start with the HTML file `calc.html`
 
+```html
   <html>
     <head><title>Multiplier</title></head>
     <body><h1>Multiplier</h1>
@@ -41,9 +42,11 @@ Start with the HTML file <code>calc.html</code>
       </form>
     </body>
   </html>
+```
 
-And the C++ source file <code>calc.cc</code>
+And the C++ source file `calc.cc`
 
+```c++
   #include <dmbcs-micro-server.h>
 
   using namespace DMBCS::Micro_Server;
@@ -75,8 +78,9 @@ And the C++ source file <code>calc.cc</code>
 
      return 0;
   }
+```
 
-then the <code>makefile</code>
+then the `makefile`
 
     CXXFLAGS = `pkg-config --cflags dmbcs-micro-server`
     LDFLAGS  = `pkg-config  --libs  dmbcs-micro-server`
@@ -86,11 +90,11 @@ Then at the command line type
     make calc
     ./calc
 
-then point a browser at <code>http://localhost:2022/</code> and use the simple
+then point a browser at `http://localhost:2022/` and use the simple
 calculator (donʼt try to do anything funny: the code has been kept
 deliberately simple and doesnʼt do any error checking).  Note that an
 answer can be obtained directly with a URL like
-<code>http://localhost:2022/compute?arg_1=3&arg_2=4</code>.
+`http://localhost:2022/compute?arg_1=3&arg_2=4`.
 
 
 ## Download
