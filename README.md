@@ -21,6 +21,78 @@ still regard it as beta-quality software.  We expect this situation to
 change in the near future.
 
 
+## Simplest example
+
+The following is provided as the simplest code to demonstrate use of the
+dmbcs-micro-server library, not to inform of any coding style or quality
+system approach.  We assume a standard GNU system with recent
+<code>make</code>, <code>bash</code>, <code>gcc</code>, etc.
+
+Start with the HTML file <code>calc.html</code>
+
+  <html>
+    <head><title>Multiplier</title></head>
+    <body><h1>Multiplier</h1>
+      <form action='compute' method='GET' id='calc'>
+        <input type='text' id='arg_1'/> x <input type='text' id='arg_2'/>
+              = <input type='text' id='result'>[result/]</input>
+        <br>
+        <input type='submit'>CALCULATE</input>
+      </form>
+    </body>
+  </html>
+
+And the C++ source file <code>calc.cc</code>
+
+  #include <dmbcs-micro-server.h>
+
+  using namespace DMBCS::Micro_Server;
+
+
+  /*  This function both serves up the basic HTML page, and
+   *  performs the multiplication and injects the result into the
+   *  HTML. */
+  void  home_page  (Query_String const &query, int const socket)
+  {
+      auto  tags  =  Hyper_Tags {};
+
+      add  (tags,
+            'result',
+            query.get ('arg_1', 0) * query.get ('arg_2', 0));
+
+      Http_Server::return_html (substitute (tags,
+                                            slurp_file ('calc.html')));
+  }
+
+
+  int main ()
+  {
+     auto server  =  Http_Server {2022,
+                                  { {'', home_page},
+                                    {'compute', home_page} }};
+
+     for (;;)   tick  (server, 1000000);
+
+     return 0;
+  }
+
+then the <code>makefile</code>
+
+    CXXFLAGS = `pkg-config --cflags dmbcs-micro-server`
+    LDFLAGS  = `pkg-config  --libs  dmbcs-micro-server`
+
+Then at the command line type
+
+    make calc
+    ./calc
+
+then point a browser at <code>http://localhost:2022/</code> and use the simple
+calculator (donʼt try to do anything funny: the code has been kept
+deliberately simple and doesnʼt do any error checking).  Note that an
+answer can be obtained directly with a URL like
+<code>http://localhost:2022/compute?arg_1=3&arg_2=4</code>.
+
+
 ## Download
 
 The *dmbcs-micro-server* source code is managed with *GIT* (configured
