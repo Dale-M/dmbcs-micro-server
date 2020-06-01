@@ -34,11 +34,11 @@ Start with the HTML file `calc.html`
   <html>
     <head><title>Multiplier</title></head>
     <body><h1>Multiplier</h1>
-      <form action='compute' method='GET' id='calc'>
-        <input type='text' id='arg_1'/> x <input type='text' id='arg_2'/>
-              = <input type='text' id='result'>[result/]</input>
+      <form action="compute" method="GET" id="calc">
+        <input type="text" name="arg_1"/> x <input type="text" name="arg_2"/>
+              = <input type="text" id="result" value="[result/]"></input>
         <br>
-        <input type='submit'>CALCULATE</input>
+        <input type="submit">CALCULATE</input>
       </form>
     </body>
   </html>
@@ -57,22 +57,22 @@ And the C++ source file `calc.cc`
    *  HTML. */
   void  home_page  (Query_String const &query, int const socket)
   {
-      auto  tags  =  Hyper_Tags {};
+      Hyper_Tags  tags;
 
-      add  (tags,
-            'result',
-            query.get ('arg_1', 0) * query.get ('arg_2', 0));
+      tags.add  ("result",
+                 query.get ("arg_1", 0) * query.get ("arg_2", 0));
 
-      Http_Server::return_html (substitute (tags,
-                                            slurp_file ('calc.html')));
+      Http_Server::return_html (socket,
+                                substitute (tags,
+                                            slurp_file ("calc.html")));
   }
 
 
   int main ()
   {
      auto server  =  Http_Server {2022,
-                                  { {'', home_page},
-                                    {'compute', home_page} }};
+                                  { {"", home_page},
+                                    {"compute", home_page} }};
 
      for (;;)   tick  (server, 1000000);
 
