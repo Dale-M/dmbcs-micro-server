@@ -27,6 +27,7 @@
 #include  <chrono>
 #include  <functional>
 #include  <map>
+#include  <poll.h>
 #include  <set>
 #include  <unistd.h>
 #include  <vector>
@@ -95,15 +96,13 @@ namespace DMBCS { namespace Micro_Server {
      *  The return value indicates if any work was done.  Will throw a
      *  runtime_error if the program receives a signal during
      *  operations. */
-    bool  tick  (const chrono::system_clock::duration&  wait,
-                 fd_set&  read_socket_set,
-                 std::function<void(const fd_set&)>  fallout);
-    
+    bool  tick  (const std::chrono::system_clock::duration&  wait,
+                 std::vector<pollfd>&&  read_socket_set,
+                 std::function<void(std::vector<pollfd>&&)>  fallout);
 
     bool   tick  (const  chrono::system_clock::duration&  wait)
     {
-      fd_set  s  {};  FD_ZERO (&s);
-      return  tick (wait, s, nullptr);
+      return  tick (wait, {}, nullptr);
     }
 
 
@@ -129,16 +128,18 @@ uint16_t  listener_port  (const Tcp_Server&);
 
 /* Append all listening and connected sockets in the Tcp_Server to the
  * fd_set. */
-int  append_to_fdset  (const Tcp_Server  &, fd_set *const);
+std::vector<pollfd>  append_to_pollset  (const Tcp_Server&,
+                                         std::vector<pollfd>&&);
 
-inline  int  append_to_fdset  (fd_set *const f,  const Tcp_Server&  T)
-{   return append_to_fdset  (T, f);   }
+inline  std::vector<pollfd>  append_to_pollset  (std::vector<pollfd>&&  p,
+                                                 const Tcp_Server&  T)
+{   return append_to_pollset  (T, std::move (p));   }
 
 
 /* Manufacture an fdset containing the listening socket and all of the
  * connected client sockets in the Tcp_Server. */
-fd_set  provide_fdset  (const Tcp_Server&  tcp);
-    
+std::vector<pollfd>  provide_pollset  (const Tcp_Server&);
+
 
 
   /* This class proxies a set of separate Tcp_Server's, presenting them to

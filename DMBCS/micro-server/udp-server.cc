@@ -43,13 +43,11 @@ namespace DMBCS { namespace Micro_Server {
   {
     namespace  C  =  std::chrono;
 
-    auto  s  =  provide_fdset  (*this);
+    std::vector<pollfd>  s  =  provide_pollset  (*this);
 
-    timeval  t  { C::duration_cast<C::seconds> (linger).count (),
-                  C::duration_cast<C::microseconds> (linger).count ()
-                      % 1'000'000};
-
-    auto const test  =  select (listen_socket + 1, &s, nullptr, nullptr, &t);
+    const int  test
+                =  poll  (s.data (),  s.size (),
+                          C::duration_cast<C::milliseconds> (linger).count ());
 
     if (-1 == test)
       {
@@ -60,7 +58,7 @@ namespace DMBCS { namespace Micro_Server {
     else if (0 == test)
       return 0;
 
-    else if (FD_ISSET (listen_socket, &s))
+    else if (s [0].revents & POLLIN)
       {
         static  char buffer [1500];
         auto  const  size
@@ -75,21 +73,22 @@ namespace DMBCS { namespace Micro_Server {
 
 
 
-  int  append_to_fdset  (Udp_Server const &udp,
-                         fd_set *const set)
+  std::vector<pollfd>  append_to_pollset  (const Udp_Server&  udp,
+                                           std::vector<pollfd>&&  p)
   {
-    FD_SET  (udp.listen_socket,  set);
-    return  udp.listen_socket;
+    p.push_back  ({  .fd  =  udp.listen_socket,
+                     .events  =  POLLIN,
+                     .revents =  0             });
+    return  p;
   }
 
 
 
-  fd_set  provide_fdset  (Udp_Server const &udp)
+  std::vector<pollfd>  provide_pollset  (const Udp_Server&  udp)
   {
-    fd_set  ret;
-    FD_ZERO  (&ret);
-    append_to_fdset  (udp,  &ret);
-    return  ret;
+    return  {{  .fd  =  udp.listen_socket,
+                .events  =  POLLIN,
+                .revents =  0              }};
   }
 
 

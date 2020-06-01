@@ -26,7 +26,9 @@
 #include  <chrono>
 #include  <functional>
 #include  <map>
+#include  <poll.h>
 #include  <set>
+#include  <string>
 #include  <vector>
 
 
@@ -36,7 +38,7 @@ namespace DMBCS { namespace Micro_Server {
   using namespace  std;
 
 
-  /* A Tcp_Server is an object which listens to a TCP port, accepts
+  /* A Udp_Server is an object which listens to a UDP port, accepts
    * connections from multiple clients (and disconnections), and takes any
    * messages these clients may send to us and hand them off to a
    * specialized message despatcher.  Real servers will inherit this class
@@ -47,7 +49,7 @@ namespace DMBCS { namespace Micro_Server {
     /* The socket on which we take new connections. */
     int  listen_socket;
 
-    string  buffer;
+    std::string  buffer;
 
 
     /** The sole object constructor.  Creates a ready-to-use server object
@@ -77,21 +79,24 @@ namespace DMBCS { namespace Micro_Server {
     bool   tick  (std::chrono::system_clock::duration);
 
 
-  } ;  /* End of class Tcp_Server. */
+  } ;  /* End of class Udp_Server. */
 
 
 
-  /* Append all listening and connected sockets in the Tcp_Server to the
+  /* Append all listening and connected sockets in the Udp_Server to the
    * fd_set. */
-  int  append_to_fdset  (Udp_Server const &, fd_set *const);
+  std::vector<pollfd>  append_to_pollset  (const Udp_Server&,
+                                           std::vector<pollfd>&&);
 
-  inline  int  append_to_fdset  (fd_set *const f, Udp_Server const &U)
-  {   return append_to_fdset  (U, f);   }
-    
+  inline  std::vector<pollfd>  append_to_pollset  (std::vector<pollfd>&&  p,
+                                                   const Udp_Server&  U)
+  {   return  append_to_pollset  (U, std::move (p));   }
 
-  /* Manufacture an fdset containing the listening socket and all of the
-   * connected client sockets in the Tcp_Server. */
-  fd_set  provide_fdset  (Udp_Server const &);
+
+  /* Manufacture a pollset containing the listening socket and all of the
+   * connected client sockets in the Udp_Server. */
+  std::vector<pollfd>  provide_pollset  (const Udp_Server&);
+
 
 
 } }  /* End of namespace DMBCS::Micro_Server. */

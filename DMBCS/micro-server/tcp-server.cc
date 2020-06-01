@@ -32,6 +32,11 @@
 namespace DMBCS { namespace Micro_Server {
 
 
+template <typename Tick,  typename  Duration>
+inline  Tick::rep  interval_count  (const Duration&  wait)
+       {   return  std::chrono::duration_cast<Tick> (wait).count ();   }
+
+
 /*  Used also by Udp_Server.  */
 
 int  Tcp_Server::bind_socket  (uint16_t const port,  int const socket_type)
@@ -63,18 +68,15 @@ Tcp_Server::Tcp_Server (uint16_t const port)
 
 
 
-bool  Tcp_Server::tick  (const chrono::system_clock::duration&  wait,
-                         fd_set&  read_socket_set,
-                         std::function<void(const fd_set&)>  fallout)
+bool  Tcp_Server::tick  (const std::chrono::system_clock::duration&  wait,
+                         std::vector<pollfd>&&  read_socket_set,
+                         std::function<void(std::vector<pollfd>&&)>  fallout)
   {
-    append_to_fdset (*this, &read_socket_set);
+    std::vector<pollfd>  socket_set
+                    =  append_to_pollset  (*this,  std::move (read_socket_set));
 
-    timeval  t  {chrono::duration_cast<chrono::seconds> (wait).count (),
-                 chrono::duration_cast<chrono::microseconds> (wait).count ()
-                     % 1'000'000};
-
-    auto const test
-      =  select (FD_SETSIZE, &read_socket_set, nullptr, nullptr, &t);
+    const int  test  =  poll (socket_set.data (),  socket_set.size (),
+                              interval_count<std::chrono::milliseconds> (wait));
 
     if (-1 == test)
        {
@@ -87,7 +89,7 @@ bool  Tcp_Server::tick  (const chrono::system_clock::duration&  wait,
     if (0 == test)
       return 0;
 
-    if (FD_ISSET (listen_socket, &read_socket_set))
+    if (socket_set.back ().revents & POLLIN)
        {
            sockaddr_in  addr;
            socklen_t size  =  sizeof (addr);
@@ -96,38 +98,38 @@ bool  Tcp_Server::tick  (const chrono::system_clock::duration&  wait,
            return  1;
        }
 
-    for (auto const c : client_sockets)
-      if (FD_ISSET (c.first, &read_socket_set))
+    for (const auto&  c  :  socket_set)
+      if (c.revents & POLLIN)
         {
           /* !!  Hardwire, hard limit. */
-          auto const len  =  read (c.first,
-                                   message_buffer.data (),
-                                   message_buffer.size ());
+          const auto  len  =  read (c.fd,
+                                    message_buffer.data (),
+                                    message_buffer.size ());
 
           if  (len  <  0)
                {
                     std::cerr  <<  strerror (errno);
-                    close (c.first);
-                    client_departed  (c.first);
-                    client_sockets.erase  (c.first);
+                    close (c.fd);
+                    client_departed  (c.fd);
+                    client_sockets.erase  (c.fd);
                }
 
           else if  (! len)
                {
-                    close (c.first);
-                    client_departed  (c.first);
-                    client_sockets.erase  (c.first);
+                    close (c.fd);
+                    client_departed  (c.fd);
+                    client_sockets.erase  (c.fd);
                }
 
           else
               process_message  ({begin (message_buffer),
                                  begin (message_buffer) + len},
-                                c.first);
+                                c.fd);
 
           return 1;
         }
 
-    fallout (read_socket_set);
+    fallout  (std::move  (read_socket_set));
     return 1;
   }
 
@@ -136,18 +138,13 @@ bool  Tcp_Server::tick  (const chrono::system_clock::duration&  wait,
 bool  Aggregate_Ticker::operator()
                           (const  chrono::system_clock::duration&  wait)
   {
-    fd_set  fds;
-    FD_ZERO (&fds);
-    int top {0};
+    std::vector<pollfd>  pollset;
 
-    for  (auto &T  :  servers)
-      top  =  std::max (top, append_to_fdset  (*T, &fds));
-    
-    timeval  t  { chrono::duration_cast<chrono::seconds> (wait).count (),
-                  chrono::duration_cast<chrono::microseconds> (wait).count ()
-                      % 1'000'000};
+    for  (auto&  T  :  servers)
+      pollset  =  append_to_pollset  (*T,  std::move (pollset));
 
-    auto const test  =  select (FD_SETSIZE, &fds, nullptr, nullptr, &t);
+    const int  test  =  poll  (pollset.data (),  pollset.size (),
+                               interval_count<std::chrono::milliseconds> (wait));
 
     if (-1 == test)
       {
@@ -159,8 +156,8 @@ bool  Aggregate_Ticker::operator()
 
     if (0 == test)    return 0;
 
-    for  (auto  &T   :  servers)
-        if  (T->tick (chrono::microseconds {0}))
+    for  (auto&  T   :  servers)
+        if  (T->tick (std::chrono::seconds (0)))
             return 1;
 
     return 0;
@@ -168,27 +165,27 @@ bool  Aggregate_Ticker::operator()
 
 
 
-  int  append_to_fdset  (Tcp_Server const &tcp,
-                         fd_set *const set)
+std::vector<pollfd>  append_to_pollset  (const Tcp_Server&  tcp,
+                                         std::vector<pollfd>&&  p)
   {
-    FD_SET (tcp.listen_socket, set);
-    for  (auto const &S  :  tcp.client_sockets)  FD_SET (S.first, set);
-    return std::max (tcp.listen_socket, begin (tcp.client_sockets)->first);
+      for  (const auto&  S  :  tcp.client_sockets)
+              p.push_back ({  .fd = S.first,
+                              .events = POLLIN,
+                              .revents = 0        });
+      p.push_back  ({   .fd = tcp.listen_socket,
+                        .events = POLLIN,
+                        .revents = 0         });
+      return p;
   }
 
 
 
-  fd_set  provide_fdset  (Tcp_Server const &tcp)
-  {
-    fd_set  ret;
-    FD_ZERO (&ret);
-    append_to_fdset (tcp, &ret);
-    return  ret;
-  }
+std::vector<pollfd>  provide_pollset  (const Tcp_Server&  tcp)
+  {   return  append_to_pollset  (tcp,  {});   }
 
 
 
-  uint16_t  listener_port  (const Tcp_Server&  T)
+uint16_t  listener_port  (const Tcp_Server&  T)
   {
     sockaddr_in  addr;
     socklen_t    len  =  sizeof (addr);
@@ -197,6 +194,7 @@ bool  Aggregate_Ticker::operator()
                         {"cannot get port of Tcp_Serverʼs listener socket"};
     return  ntohs (addr.sin_port);
   }
+
     
 
 } }  /* End of namespace DMBCS::Micro_Server. */
